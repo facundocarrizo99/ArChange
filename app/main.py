@@ -7,7 +7,7 @@ This application provides endpoints to:
 - Schedule automatic fetching every 2 hours
 """
 import os
-from fastapi import FastAPI, HTTPException, Body
+from fastapi import FastAPI, HTTPException
 from typing import Optional, List, Dict, Any
 from decimal import Decimal
 from .job import run_job, scheduled_task
@@ -16,9 +16,7 @@ from .models import Exchange
 from .fetch_exchange import fetch_and_store_exchange_rates
 from .schemas import (
     ExchangeResponse,
-    ExchangeCreate,
     ExchangeListResponse,
-    ExchangeCreateResponse,
     FetchExchangeResponse,
     ErrorResponse,
 )
@@ -158,56 +156,6 @@ def get_exchange():
         rows = db.get_exchanges(limit=100)
         exchanges = [Exchange.from_row(row).to_dict() for row in rows]
         return {"status": "ok", "data": exchanges}
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
-
-
-@app.post(
-    "/api/exchange",
-    response_model=ExchangeCreateResponse,
-    tags=["Exchange Rates"],
-    summary="Create a new exchange rate record",
-    description="""
-    Manually create a new exchange rate record in the database.
-    
-    This endpoint allows you to insert custom exchange rate data. All price fields
-    are optional, but at least the exchange type must be specified.
-    
-    **Note**: For automatic fetching from DolarAPI, use the `/api/exchange/fetch` endpoint instead.
-    """,
-    responses={
-        200: {
-            "description": "Exchange rate successfully created",
-            "model": ExchangeCreateResponse,
-        },
-        500: {
-            "description": "Failed to create exchange rate",
-            "model": ErrorResponse,
-        },
-    },
-)
-def create_exchange(
-    type: str = Body(..., description="Exchange rate type (e.g., 'blue', 'oficial')"),
-    buy: Optional[float] = Body(None, description="Buy price in ARS"),
-    sell: Optional[float] = Body(None, description="Sell price in ARS"),
-    rate: Optional[float] = Body(None, description="Average rate"),
-    diff: Optional[float] = Body(None, description="Difference between sell and buy"),
-):
-    """Create a new exchange rate record."""
-    try:
-        # Convert floats to Decimal for DB storage
-        buy_dec = Decimal(str(buy)) if buy is not None else None
-        sell_dec = Decimal(str(sell)) if sell is not None else None
-        rate_dec = Decimal(str(rate)) if rate is not None else None
-        diff_dec = Decimal(str(diff)) if diff is not None else None
-        
-        new_id = db.insert_exchange(type, buy_dec, sell_dec, rate_dec, diff_dec)
-        
-        # Fetch the newly created record
-        row = db.get_exchange_by_id(new_id)
-        exchange = Exchange.from_row(row)
-        
-        return {"status": "ok", "data": exchange.to_dict()}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
