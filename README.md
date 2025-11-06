@@ -276,10 +276,3 @@ uvicorn app.main:app --host 0.0.0.0 --port 8001
 
 MIT
 
-## Contributing
-
-Contributions are welcome! Please open an issue or submit a pull request.
-
-## Support
-
-For questions or issues, please open a GitHub issue or contact support@wallbit.example.com
