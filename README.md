@@ -1,4 +1,4 @@
-# WallBit - Argentine Exchange Rates API
+# ArChange - Argentine Exchange Rates API
 
 A FastAPI-based application that fetches and stores Argentine peso (ARS) exchange rates from multiple sources.
 
