@@ -3,7 +3,7 @@ import httpx
 from decimal import Decimal
 from typing import List, Dict, Any
 from . import db
-from .exchange import Exchange
+from .dolar_api import Exchange
 
 
 def fetch_and_store_exchange_rates() -> Dict[str, Any]:

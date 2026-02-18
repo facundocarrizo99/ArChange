@@ -6,22 +6,22 @@ This application provides endpoints to:
 - Query stored exchange rates
 - Schedule automatic fetching every 2 hours
 """
-import os
-from fastapi import FastAPI, HTTPException
-from typing import Optional, List, Dict, Any
-from decimal import Decimal
+from pathlib import Path
+from typing import Optional
+
+from fastapi import FastAPI
+from apscheduler.schedulers.background import BackgroundScheduler
+
+from .config import DATABASE_DSN, SCHEDULER_INTERVAL_HOURS
 from .job import run_job, scheduled_task
 from . import db
 from .models import Exchange
 from .fetch_exchange import fetch_and_store_exchange_rates
 from .schemas import (
-    ExchangeResponse,
     ExchangeListResponse,
     FetchExchangeResponse,
     ErrorResponse,
 )
-
-from apscheduler.schedulers.background import BackgroundScheduler
 
 # OpenAPI metadata
 app = FastAPI(
@@ -85,33 +85,29 @@ scheduler = BackgroundScheduler()
 def startup_event():
     # Initialize DB pool if environment variables are present (or defaults)
     try:
-        host = os.getenv("POSTGRES_HOST", "localhost")
-        port = os.getenv("POSTGRES_PORT", "5433")
-        name = os.getenv("POSTGRES_DB", "wallbitdb")
-        user = os.getenv("POSTGRES_USER", "wallbit")
-        password = os.getenv("POSTGRES_PASSWORD", "wallbitpass")
+        db.init_pool(DATABASE_DSN)
 
-        dsn = f"postgresql://{user}:{password}@{host}:{port}/{name}"
-        db.init_pool(dsn)
-        
         # Run migrations after pool initialization
-        import os as _os
-        from pathlib import Path
         migrations_dir = Path(__file__).parent.parent / "migrations"
         migration_file = migrations_dir / "001_create_exchange_rates.sql"
         if migration_file.exists():
             db.run_migration(str(migration_file))
     except Exception as e:
-        # If DB isn't available during startup (e.g., no docker running), continue — job will run without DB
+        # If DB isn't available during startup (e.g., no docker running), continue
         print(f"DB startup warning: {e}")
-        pass
 
-    # schedule the periodic job (every 2 hours)
+    # Schedule the periodic job
     try:
-        scheduler.add_job(scheduled_task, "interval", hours=2, id="demo_scheduled_job", replace_existing=True)
+        scheduler.add_job(
+            scheduled_task,
+            "interval",
+            hours=SCHEDULER_INTERVAL_HOURS,
+            id="scheduled_exchange_fetch",
+            replace_existing=True,
+        )
         scheduler.start()
     except Exception:
-        # scheduler may already be started in some reload scenarios; ignore errors
+        # Scheduler may already be started in some reload scenarios; ignore errors
         pass
 
 
