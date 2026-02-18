@@ -7,10 +7,13 @@ Expose:
 - run_migration(sql_file_path): execute a SQL migration file
 - insert_exchange / get_exchanges: CRUD helpers for exchange_rates
 """
+import logging
 import os
 from pathlib import Path
 from typing import Optional, List
 from decimal import Decimal
+
+logger = logging.getLogger(__name__)
 
 pool = None
 
@@ -24,7 +27,10 @@ def init_pool(dsn: str):
         raise RuntimeError("psycopg_pool is required to use the DB") from e
 
     if pool is None:
-        pool = ConnectionPool(conninfo=dsn)
+        min_size = int(os.getenv("POOL_MIN_SIZE", "2"))
+        max_size = int(os.getenv("POOL_MAX_SIZE", "10"))
+        pool = ConnectionPool(conninfo=dsn, min_size=min_size, max_size=max_size)
+        logger.info("Connection pool created (min=%d, max=%d)", min_size, max_size)
 
 
 def close_pool():
@@ -63,7 +69,7 @@ def run_migration(sql_file_path: str):
 
 
 def insert_exchange(
-    type: str,
+    rate_type: str,
     buy: Optional[Decimal] = None,
     sell: Optional[Decimal] = None,
     rate: Optional[Decimal] = None,
@@ -81,7 +87,7 @@ def insert_exchange(
                 VALUES (%s, %s, %s, %s, %s)
                 RETURNING id
                 """,
-                (type, buy, sell, rate, diff),
+                (rate_type, buy, sell, rate, diff),
             )
             new_id = cur.fetchone()[0]
             conn.commit()

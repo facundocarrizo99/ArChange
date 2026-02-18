@@ -23,6 +23,7 @@ def test_batch_script_help():
     assert p.returncode == 0
     assert "Fetch exchange rates" in p.stdout
     assert "--db-host" in p.stdout
+    assert "--db-password" not in p.stdout  # password kept out of CLI
 
 
 @patch('app.fetch_exchange.httpx.get')

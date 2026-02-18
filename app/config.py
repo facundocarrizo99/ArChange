@@ -1,5 +1,6 @@
 """Centralized configuration loaded from environment variables."""
 
+import logging
 import os
 
 
@@ -15,3 +16,13 @@ DATABASE_DSN = (
 )
 
 SCHEDULER_INTERVAL_HOURS = int(os.getenv("SCHEDULER_INTERVAL_HOURS", "2"))
+
+POOL_MIN_SIZE = int(os.getenv("POOL_MIN_SIZE", "2"))
+POOL_MAX_SIZE = int(os.getenv("POOL_MAX_SIZE", "10"))
+
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+
+logging.basicConfig(
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    level=getattr(logging, LOG_LEVEL, logging.INFO),
+)
