@@ -54,11 +54,11 @@ class TestJobExecution:
 
     @patch('app.job.fetch_and_store_exchange_rates')
     def test_run_job_when_function_unavailable(self, mock_fetch):
-        """Test run_job when fetch function is not available."""
-        with patch('app.job.fetch_and_store_exchange_rates', None):
-            result = run_job()
-            # When function is None, it should handle gracefully
-            # The actual behavior depends on implementation
+        """Test run_job when fetch function raises an exception."""
+        mock_fetch.side_effect = RuntimeError("DB pool not initialized")
+        result = run_job()
+        assert result["status"] == "error"
+        assert "DB pool not initialized" in result["message"]
 
     @patch('app.job.run_job')
     def test_scheduled_task(self, mock_run_job):

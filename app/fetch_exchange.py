@@ -1,9 +1,12 @@
 """Fetch exchange rate data from external API and store in database."""
+import logging
 import httpx
 from decimal import Decimal
 from typing import List, Dict, Any
 from . import db
-from .dolar_api import Exchange
+from .dolar_api import DolarApiRate
+
+logger = logging.getLogger(__name__)
 
 
 def fetch_and_store_exchange_rates() -> Dict[str, Any]:
@@ -26,7 +29,7 @@ def fetch_and_store_exchange_rates() -> Dict[str, Any]:
         for item in data:
             try:
                 # Create Exchange object with API data
-                exchange = Exchange(
+                exchange = DolarApiRate(
                     moneda=item.get("moneda", "USD"),
                     nombre=item.get("nombre", ""),
                     casa=item.get("casa", "unknown"),
@@ -52,6 +55,7 @@ def fetch_and_store_exchange_rates() -> Dict[str, Any]:
                 inserted_count += 1
                 
             except Exception as e:
+                logger.warning("Failed to insert rate for %s: %s", item.get("casa", "unknown"), e)
                 errors.append(f"Error inserting {item.get('casa', 'unknown')}: {str(e)}")
         
         return {

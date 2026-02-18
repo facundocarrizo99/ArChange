@@ -6,10 +6,12 @@ This application provides endpoints to:
 - Query stored exchange rates
 - Schedule automatic fetching every 2 hours
 """
+import logging
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from .config import DATABASE_DSN, SCHEDULER_INTERVAL_HOURS
@@ -22,6 +24,50 @@ from .schemas import (
     FetchExchangeResponse,
     ErrorResponse,
 )
+
+logger = logging.getLogger(__name__)
+
+# scheduler for periodic tasks
+scheduler = BackgroundScheduler()
+
+
+@asynccontextmanager
+async def lifespan(application: FastAPI):
+    """Manage startup / shutdown resources."""
+    # ── startup ──
+    try:
+        db.init_pool(DATABASE_DSN)
+        migrations_dir = Path(__file__).parent.parent / "migrations"
+        migration_file = migrations_dir / "001_create_exchange_rates.sql"
+        if migration_file.exists():
+            db.run_migration(str(migration_file))
+    except Exception:
+        logger.warning("Database unavailable at startup", exc_info=True)
+
+    try:
+        scheduler.add_job(
+            scheduled_task,
+            "interval",
+            hours=SCHEDULER_INTERVAL_HOURS,
+            id="scheduled_exchange_fetch",
+            replace_existing=True,
+        )
+        scheduler.start()
+    except Exception:
+        logger.warning("Scheduler failed to start", exc_info=True)
+
+    yield
+
+    # ── shutdown ──
+    try:
+        scheduler.shutdown(wait=False)
+    except Exception:
+        pass
+    try:
+        db.close_pool()
+    except Exception:
+        pass
+
 
 # OpenAPI metadata
 app = FastAPI(
@@ -74,54 +120,13 @@ real-time Argentine peso exchange rates.
             "name": "Jobs",
             "description": "Background job execution endpoints",
         },
+        {
+            "name": "Health",
+            "description": "Application health checks",
+        },
     ],
+    lifespan=lifespan,
 )
-
-# scheduler for periodic tasks
-scheduler = BackgroundScheduler()
-
-
-@app.on_event("startup")
-def startup_event():
-    # Initialize DB pool if environment variables are present (or defaults)
-    try:
-        db.init_pool(DATABASE_DSN)
-
-        # Run migrations after pool initialization
-        migrations_dir = Path(__file__).parent.parent / "migrations"
-        migration_file = migrations_dir / "001_create_exchange_rates.sql"
-        if migration_file.exists():
-            db.run_migration(str(migration_file))
-    except Exception as e:
-        # If DB isn't available during startup (e.g., no docker running), continue
-        print(f"DB startup warning: {e}")
-
-    # Schedule the periodic job
-    try:
-        scheduler.add_job(
-            scheduled_task,
-            "interval",
-            hours=SCHEDULER_INTERVAL_HOURS,
-            id="scheduled_exchange_fetch",
-            replace_existing=True,
-        )
-        scheduler.start()
-    except Exception:
-        # Scheduler may already be started in some reload scenarios; ignore errors
-        pass
-
-
-@app.on_event("shutdown")
-def shutdown_event():
-    try:
-        scheduler.shutdown(wait=False)
-    except Exception:
-        pass
-
-    try:
-        db.close_pool()
-    except Exception:
-        pass
 
 
 @app.get(
@@ -153,7 +158,8 @@ def get_exchange():
         exchanges = [Exchange.from_row(row).to_dict() for row in rows]
         return {"status": "ok", "data": exchanges}
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        logger.exception("Failed to retrieve exchange rates")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post(
@@ -232,7 +238,23 @@ def run_job_endpoint(payload: Optional[dict] = None):
 def fetch_exchange_rates():
     """Fetch exchange rates from dolarapi.com and store them in the database."""
     result = fetch_and_store_exchange_rates()
+    if result.get("status") == "error":
+        raise HTTPException(status_code=502, detail=result.get("message", "Upstream fetch failed"))
     return result
+
+
+@app.get(
+    "/healthz",
+    tags=["Health"],
+    summary="Health check",
+    description="Returns 200 when the service is running and the database is reachable.",
+)
+def healthz():
+    """Liveness / readiness probe."""
+    healthy = db.get_pool() is not None
+    if not healthy:
+        raise HTTPException(status_code=503, detail="Database pool not initialized")
+    return {"status": "ok"}
 
 
 if __name__ == "__main__":

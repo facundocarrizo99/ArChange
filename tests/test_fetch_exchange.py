@@ -3,7 +3,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 from decimal import Decimal
 from app.fetch_exchange import fetch_and_store_exchange_rates
-from app.dolar_api import Exchange
+from app.dolar_api import DolarApiRate
 
 
 class TestFetchExchange:
@@ -175,11 +175,11 @@ class TestFetchExchange:
 
 
 class TestExchangeModel:
-    """Test suite for the Exchange model."""
+    """Test suite for the DolarApiRate model."""
 
     def test_exchange_initialization(self):
-        """Test Exchange object initialization."""
-        exchange = Exchange(
+        """Test DolarApiRate object initialization."""
+        exchange = DolarApiRate(
             moneda="USD",
             nombre="Blue",
             casa="blue",
@@ -196,8 +196,8 @@ class TestExchangeModel:
         assert exchange.fechaActualizacion == "2025-11-06T19:58:00.000Z"
 
     def test_exchange_repr(self):
-        """Test Exchange string representation."""
-        exchange = Exchange(
+        """Test DolarApiRate string representation."""
+        exchange = DolarApiRate(
             moneda="USD",
             nombre="Blue",
             casa="blue",

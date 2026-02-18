@@ -1,9 +1,9 @@
-"""Exchange class for representing exchange rate data from DolarAPI."""
+"""Data class for exchange rate responses from DolarAPI."""
 from typing import Optional
 
 
-class Exchange:
-    """Exchange rate representation from DolarAPI."""
+class DolarApiRate:
+    """Single exchange-rate record returned by DolarAPI."""
 
     def __init__(
         self,
