@@ -1,6 +1,7 @@
 [tool.poetry]
-name = "demo-job-api"
-version = "0.1.0"
+name = "archange"
+version = "1.0.0"
+description = "Argentine Exchange Rates API – fetch, store and serve ARS exchange rates"
 
 [build-system]
 requires = ["setuptools", "wheel"]

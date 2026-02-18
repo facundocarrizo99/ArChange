@@ -3,7 +3,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 from decimal import Decimal
 from app.fetch_exchange import fetch_and_store_exchange_rates
-from app.exchange import Exchange
+from app.dolar_api import Exchange
 
 
 class TestFetchExchange:

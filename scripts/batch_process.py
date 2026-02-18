@@ -2,10 +2,10 @@
 """Batch/CLI script to fetch exchange rates from DolarAPI and store in database."""
 import argparse
 import json
-import os
 import sys
 
 from app import db
+from app.config import POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD
 from app.fetch_exchange import fetch_and_store_exchange_rates
 
 
@@ -15,27 +15,27 @@ def main():
     )
     parser.add_argument(
         "--db-host",
-        default=os.getenv("POSTGRES_HOST", "localhost"),
+        default=POSTGRES_HOST,
         help="PostgreSQL host (default: localhost)",
     )
     parser.add_argument(
         "--db-port",
-        default=os.getenv("POSTGRES_PORT", "5433"),
+        default=POSTGRES_PORT,
         help="PostgreSQL port (default: 5433)",
     )
     parser.add_argument(
         "--db-name",
-        default=os.getenv("POSTGRES_DB", "wallbitdb"),
+        default=POSTGRES_DB,
         help="Database name (default: wallbitdb)",
     )
     parser.add_argument(
         "--db-user",
-        default=os.getenv("POSTGRES_USER", "wallbit"),
+        default=POSTGRES_USER,
         help="Database user (default: wallbit)",
     )
     parser.add_argument(
         "--db-password",
-        default=os.getenv("POSTGRES_PASSWORD", "wallbitpass"),
+        default=POSTGRES_PASSWORD,
         help="Database password",
     )
     args = parser.parse_args()
