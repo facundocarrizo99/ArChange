@@ -253,7 +253,7 @@ def healthz():
     """Liveness / readiness probe."""
     healthy = db.get_pool() is not None
     if not healthy:
-        raise HTTPException(status_code=503, detail="Database pool not initialised")
+        raise HTTPException(status_code=503, detail="Database pool not initialized")
     return {"status": "ok"}
 
 

@@ -8,10 +8,11 @@ Expose:
 - insert_exchange / get_exchanges: CRUD helpers for exchange_rates
 """
 import logging
-import os
 from pathlib import Path
 from typing import Optional, List
 from decimal import Decimal
+
+from .config import POOL_MIN_SIZE, POOL_MAX_SIZE
 
 logger = logging.getLogger(__name__)
 
@@ -27,10 +28,8 @@ def init_pool(dsn: str):
         raise RuntimeError("psycopg_pool is required to use the DB") from e
 
     if pool is None:
-        min_size = int(os.getenv("POOL_MIN_SIZE", "2"))
-        max_size = int(os.getenv("POOL_MAX_SIZE", "10"))
-        pool = ConnectionPool(conninfo=dsn, min_size=min_size, max_size=max_size)
-        logger.info("Connection pool created (min=%d, max=%d)", min_size, max_size)
+        pool = ConnectionPool(conninfo=dsn, min_size=POOL_MIN_SIZE, max_size=POOL_MAX_SIZE)
+        logger.info("Connection pool created (min=%d, max=%d)", POOL_MIN_SIZE, POOL_MAX_SIZE)
 
 
 def close_pool():
